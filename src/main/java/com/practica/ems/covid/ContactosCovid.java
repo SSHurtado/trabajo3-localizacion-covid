@@ -2,11 +2,13 @@ package com.practica.ems.covid;
 
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import com.practica.excecption.EmsDuplicateLocationException;
 import com.practica.excecption.EmsDuplicatePersonException;
@@ -66,9 +68,9 @@ public class ContactosCovid {
 			this.localizacion = new Localizacion();
 			this.listaContactos = new ListaContactos();
 		}
-		String datas[] = dividirEntrada(data);
+		String[] datas = dividirEntrada(data);
 		for (String linea : datas) {
-			String datos[] = this.dividirLineaData(linea);
+			String[] datos = this.dividirLineaData(linea);
 			if (!datos[0].equals("PERSONA") && !datos[0].equals("LOCALIZACION")) {
 				throw new EmsInvalidTypeException();
 			}
@@ -89,74 +91,56 @@ public class ContactosCovid {
 		}
 	}
 
-	public void loadDataFile(String fichero, boolean reset) {
-		File archivo = null;
-		FileReader fr = null;
-		BufferedReader br = null;
-		String datas[] = null, data = null;
-		loadDataFile(fichero, reset, archivo, fr, br, datas, data);
-		
-	}
+    public void loadDataFile(String fichero, boolean reset)
+	{
 
-	@SuppressWarnings("resource")
-	public void loadDataFile(String fichero, boolean reset, File archivo, FileReader fr, BufferedReader br, String datas[], String data ) {
-		try {
-			// Apertura del fichero y creacion de BufferedReader para poder
-			// hacer una lectura comoda (disponer del metodo readLine()).
-			archivo = new File(fichero);
-			fr = new FileReader(archivo);
-			br = new BufferedReader(fr);
-			if (reset) {
-				this.poblacion = new Poblacion();
-				this.localizacion = new Localizacion();
-				this.listaContactos = new ListaContactos();
-			} 
-			/**
-			 * Lectura del fichero	línea a línea. Compruebo que cada línea 
-			 * tiene el tipo PERSONA o LOCALIZACION y cargo la línea de datos en la 
-			 * lista correspondiente. Sino viene ninguno de esos tipos lanzo una excepción
-			 */
-			while ((data = br.readLine()) != null) {
-				datas = dividirEntrada(data.trim());
-				for (String linea : datas) {
-					String datos[] = this.dividirLineaData(linea);
-					if (!datos[0].equals("PERSONA") && !datos[0].equals("LOCALIZACION")) {
-						throw new EmsInvalidTypeException();
-					}
-					if (datos[0].equals("PERSONA")) {
-						if (datos.length != Constantes.MAX_DATOS_PERSONA) {
-							throw new EmsInvalidNumberOfDataException("El número de datos para PERSONA es menor de 8");
-						}
-						this.poblacion.addPersona(this.crearPersona(datos));
-					}
-					if (datos[0].equals("LOCALIZACION")) {
-						if (datos.length != Constantes.MAX_DATOS_LOCALIZACION) {
-							throw new EmsInvalidNumberOfDataException(
-									"El número de datos para LOCALIZACION es menor de 6" );
-						}
-						PosicionPersona pp = this.crearPosicionPersona(datos);
-						this.localizacion.addLocalizacion(pp);
-						this.listaContactos.insertarNodoTemporal(pp);
-					}
-				}
-
-			}
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		} finally {
-			// En el finally cerramos el fichero, para asegurarnos
-			// que se cierra tanto si todo va bien como si salta
-			// una excepcion.
-			try {
-				if (null != fr) {
-					fr.close();
-				}
-			} catch (Exception e2) {
-				e2.printStackTrace();
-			}
+		if (reset) {
+			reset();
 		}
+
+		try (Stream<String> stream = Files.lines(Paths.get(fichero))) {
+			stream.forEach(line -> {
+				try {
+					parseLine(line);
+				} catch(EmsInvalidTypeException |
+					   EmsInvalidNumberOfDataException |
+					   EmsDuplicatePersonException |
+					   EmsDuplicateLocationException ex
+				)
+				{
+					throw new RuntimeException(ex);
+				}
+			});
+		} catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+	private void parseLine(String line) throws
+			EmsInvalidTypeException,
+			EmsInvalidNumberOfDataException,
+			EmsDuplicatePersonException,
+			EmsDuplicateLocationException
+	{
+		String[] datos = dividirLineaData(line);
+
+		if(datos[0].equals("PERSONA")) {
+			this.poblacion.addPersona(Persona.parsePerson(datos));
+		} else if ("LOCALIZACION".equals(datos[0])) {
+			PosicionPersona pp = PosicionPersona.parsePosicionPersona(datos);
+			this.localizacion.addLocalizacion(pp);
+			this.listaContactos.insertarNodoTemporal(pp);
+		} else {
+			throw new EmsInvalidTypeException();
+		}
+    }
+
+	private void reset() {
+		this.poblacion = new Poblacion();
+		this.localizacion = new Localizacion();
+		this.listaContactos = new ListaContactos();
 	}
+
 	public int findPersona(String documento) throws EmsPersonNotFoundException {
 		int pos;
 		try {

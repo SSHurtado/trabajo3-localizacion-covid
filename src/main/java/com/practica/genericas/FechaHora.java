@@ -1,12 +1,9 @@
 package com.practica.genericas;
 
-
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.Locale;
 
 public class FechaHora implements Comparable<FechaHora>{
-	public class Fecha {
+	public static class Fecha {
 		private int dia, mes, anio;
 		 
 		public Fecha(int dia, int mes, int anio) {
@@ -42,15 +39,26 @@ public class FechaHora implements Comparable<FechaHora>{
 
 		@Override
 		public String toString() {
-			String cadena = String.format("%2d/%02d/%4d",dia,mes,anio);
-			return cadena;
+            return String.format("%2d/%02d/%4d",dia,mes,anio);
 		}
-		
-		
 
+		public static Fecha parseDate(String data) throws IllegalArgumentException{
+			String[] dateValues = data.split("/");
+			if (dateValues.length != 3) {
+				throw new IllegalArgumentException(
+					"String provided is not in the expected date format (dd/mm/yyyy)"
+				);
+			}
+
+			int day = Integer.parseInt(dateValues[0]);
+			int month = Integer.parseInt(dateValues[1]);
+			int year = Integer.parseInt(dateValues[2]);
+
+            return new Fecha(day, month, year);
+		}
 	}
 
-	public class Hora {
+	public static class Hora {
 		private int hora, minuto;
 
 		public Hora(int hora, int minuto) {
@@ -73,6 +81,20 @@ public class FechaHora implements Comparable<FechaHora>{
 
 		public void setMinuto(int minuto) {
 			this.minuto = minuto;
+		}
+
+		public static Hora parseTime(String data) {
+			String[] timeValues = data.split(":");
+			if (timeValues.length != 2) {
+				throw new IllegalArgumentException(
+					"String provided is not in the expected time format (hh:mm)"
+				);
+			}
+
+			int hour = Integer.parseInt(timeValues[0]);
+			int minute = Integer.parseInt(timeValues[1]);
+
+			return new Hora(hour, minute);
 		}
 
 		@Override
@@ -111,6 +133,18 @@ public class FechaHora implements Comparable<FechaHora>{
 
 	public void setHora(Hora hora) {
 		this.hora = hora;
+	}
+
+	public static FechaHora parseDateTime(String data) throws IllegalArgumentException {
+		Fecha date = Fecha.parseDate(data);
+		Hora time = new Hora(0, 0);
+		return new FechaHora(date, time);
+	}
+
+	public static FechaHora parseDateTime(String fecha, String hora) throws IllegalArgumentException{
+		Fecha date = Fecha.parseDate(fecha);
+		Hora time = Hora.parseTime(hora);
+		return new FechaHora(date, time);
 	}
 
 	@Override

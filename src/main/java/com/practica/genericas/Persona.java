@@ -1,22 +1,25 @@
 package com.practica.genericas;
 
 
+import com.practica.excecption.EmsInvalidNumberOfDataException;
+
 public class Persona {
 	private String nombre, apellidos, documento, email, direccion, cp;
 	FechaHora fechaNacimiento;
 
-	public Persona() {
+    public Persona() {
 
 	}
 
 	public Persona(String nombre, String apellidos, String documento, String email, String direccion,
-			FechaHora fechaNacimiento) {
+			String cp, FechaHora fechaNacimiento) {
 		super();
 		this.nombre = nombre;
 		this.apellidos = apellidos;
 		this.documento = documento;
 		this.email = email;
 		this.direccion = direccion;
+		this.cp = cp;
 		this.fechaNacimiento = fechaNacimiento;
 	}
 
@@ -94,5 +97,23 @@ public class Persona {
         		fecha.getFecha().getAnio());
 
 		return cadena;
+	}
+
+	public static Persona parsePerson(String[] data) throws EmsInvalidNumberOfDataException {
+        final int MAX_DATA_PERSONA = 8;
+		// Because persona attributes start at index 1 we need to add 1 to the number of attributes of the class.
+
+        if (data.length != MAX_DATA_PERSONA) {
+			throw new EmsInvalidNumberOfDataException("Invalid number of fields for PERSONA");
+		}
+		String document = data[1];
+		String name = data[2];
+		String surnames = data[3];
+		String email = data[4];
+		String address = data[5];
+		String postCode = data[6];
+		FechaHora dateOfBirth = FechaHora.parseDateTime(data[7]);
+
+		return new Persona(name, surnames, document, email, address, postCode, dateOfBirth);
 	}
 }
